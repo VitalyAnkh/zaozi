@@ -108,3 +108,19 @@ object circtpanamabinding extends JavaModule {
   def includePaths = T(Seq(PathRef(circtInstallPath() / "include")))
   def libraryPaths = T(Seq(PathRef(circtInstallPath() / "lib")))
 }
+
+object mlirlib extends ScalaModule with ScalafmtModule {
+  def scalaVersion = T(v.scala)
+  // TODO: split the C-API of MLIR and CIRCT
+  override def moduleDeps = Seq(circtpanamabinding)
+  object tests extends ScalaTests with Utest {
+    def ivyDeps = Agg(v.utest)
+
+    override def forkArgs: T[Seq[String]] = T(
+      super.forkArgs() ++ Seq("--enable-native-access=ALL-UNNAMED", "--enable-preview")
+        ++ circtpanamabinding
+        .libraryPaths()
+        .map(p => s"-Djava.library.path=${p.path}")
+    )
+  }
+}
