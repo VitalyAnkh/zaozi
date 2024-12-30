@@ -729,7 +729,7 @@ end given
 given HeadPrimApi with
   def headPrim(
     input:       Value,
-    amount:      Int,
+    amount:      BigInt,
     location:    Location
   )(
     using arena: Arena,
@@ -844,7 +844,7 @@ given MuxPrimApi with
     op
 end given
 
-given NeqPrimApi with
+given NEQPrimApi with
   def neqPrim(
     lhs:         Value,
     rhs:         Value,
@@ -853,8 +853,8 @@ given NeqPrimApi with
     using arena: Arena,
     context:     Context,
     block:       Block
-  ): NeqPrim =
-    val op = NeqPrim(
+  ): NEQPrim =
+    val op = NEQPrim(
       summon[OperationApi].operationCreate(
         name = "firrtl.neq",
         location = location,
@@ -954,7 +954,7 @@ end given
 given PadPrimApi with
   def padPrim(
     input:       Value,
-    amount:      Int,
+    amount:      BigInt,
     location:    Location
   )(
     using arena: Arena,
@@ -1005,7 +1005,7 @@ end given
 given ShlPrimApi with
   def shlPrim(
     input:       Value,
-    amount:      Int,
+    amount:      BigInt,
     location:    Location
   )(
     using arena: Arena,
@@ -1034,7 +1034,7 @@ end given
 given ShrPrimApi with
   def shrPrim(
     input:       Value,
-    amount:      Int,
+    amount:      BigInt,
     location:    Location
   )(
     using arena: Arena,
@@ -1096,7 +1096,7 @@ given SubaccessApi with
       summon[OperationApi].operationCreate(
         name = "firrtl.subaccess",
         location = location,
-        operands = Seq(lhs, rhs),
+        operands = Seq(input, index),
         inferredResultsTypes = Some(1)
       )
     )
@@ -1107,7 +1107,7 @@ end given
 given SubfieldApi with
   def subfield(
     input:       Value,
-    fieldIndex:  Int,
+    fieldIndex:  BigInt,
     location:    Location
   )(
     using arena: Arena,
@@ -1136,14 +1136,14 @@ end given
 
 given SubindexApi with
   def subindex(
-                input:       Value,
-                index:  Int,
-                location:    Location
-              )(
-                using arena: Arena,
-                context:     Context,
-                block:       Block
-              ): Subindex =
+    input:       Value,
+    index:       BigInt,
+    location:    Location
+  )(
+    using arena: Arena,
+    context:     Context,
+    block:       Block
+  ): Subindex =
     val op = Subindex(
       summon[OperationApi].operationCreate(
         name = "firrtl.subindex",
@@ -1166,14 +1166,14 @@ end given
 
 given TailPrimApi with
   def tailPrim(
-                input:       Value,
-                amount:  Int,
-                location:    Location
-              )(
-                using arena: Arena,
-                context:     Context,
-                block:       Block
-              ): TailPrim =
+    input:       Value,
+    amount:      BigInt,
+    location:    Location
+  )(
+    using arena: Arena,
+    context:     Context,
+    block:       Block
+  ): TailPrim =
     val op = TailPrim(
       summon[OperationApi].operationCreate(
         name = "firrtl.amount",
@@ -1196,14 +1196,14 @@ end given
 
 given XorPrimApi with
   def xorPrim(
-               lhs:         Value,
-               rhs:         Value,
-               location:    Location
-             )(
-               using arena: Arena,
-               context:     Context,
-               block:       Block
-             ): XorPrim =
+    lhs:         Value,
+    rhs:         Value,
+    location:    Location
+  )(
+    using arena: Arena,
+    context:     Context,
+    block:       Block
+  ): XorPrim =
     val op = XorPrim(
       summon[OperationApi].operationCreate(
         name = "firrtl.xor",
@@ -1218,13 +1218,13 @@ end given
 
 given XorRPrimApi with
   def xorRPrim(
-                input:       Value,
-                location:    Location
-              )(
-                using arena: Arena,
-                context:     Context,
-                block:       Block
-              ): XorRPrim =
+    input:       Value,
+    location:    Location
+  )(
+    using arena: Arena,
+    context:     Context,
+    block:       Block
+  ): XorRPrim =
     val op = XorRPrim(
       summon[OperationApi].operationCreate(
         name = "firrtl.xorr",
@@ -1236,4 +1236,3 @@ given XorRPrimApi with
     block.appendOwnedOperation(op.operation)
     op
 end given
-
