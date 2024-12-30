@@ -34,7 +34,11 @@ object zaozi extends ScalaModule with ScalafmtModule {
 // The Scala API
 object circtlib extends ScalaModule with ScalafmtModule {
   def scalaVersion = T(v.scala)
-  override def moduleDeps = Seq(circtpanamabinding)
+
+  override def moduleDeps = Seq(mlirlib, circtpanamabinding)
+
+  def ivyDeps = Agg(v.pprint)
+
   object tests extends ScalaTests with Utest {
     def ivyDeps = Agg(v.utest)
 
