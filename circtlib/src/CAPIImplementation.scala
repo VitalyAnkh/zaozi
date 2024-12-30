@@ -114,11 +114,6 @@ given AttributeApi with
       using arena: Arena,
       context:     Context
     ): MemorySegment = firrtlAttrGetConvention(arena, context.segment, firrtlConvention.toNative)
-  extension (nameKind:         FirrtlNameKind)
-    inline def toAttribute(
-      using arena: Arena,
-      context:     Context
-    ): MemorySegment = firrtlAttrGetNameKind(arena, context.segment, nameKind.toNative)
   extension (ruw:              FirrtlRUW)
     inline def toAttribute(
       using arena: Arena,
@@ -290,9 +285,12 @@ given FirrtlBundleFieldApi with
     FIRRTLBundleField.type$slice(buffer).copyFrom(tpe.segment)
     FirrtlBundleField(buffer)
   extension (firrtlBundleField: FirrtlBundleField)
-    inline def getName()(using arena: Arena): String = Identifier(FIRRTLBundleField.name$slice(firrtlBundleField.segment)).str()
+    inline def getName(
+    )(
+      using arena: Arena
+    ): String = Identifier(FIRRTLBundleField.name$slice(firrtlBundleField.segment)).str()
     inline def getIsFlip(): Boolean = FIRRTLBundleField.isFlip$get(firrtlBundleField.segment)
-    inline def getType(): Type = Type(FIRRTLBundleField.type$slice(firrtlBundleField.segment))
+    inline def getType():   Type    = Type(FIRRTLBundleField.type$slice(firrtlBundleField.segment))
 
     inline def segment: MemorySegment = firrtlBundleField._segment
     inline def sizeOf:  Int           = FIRRTLBundleField.sizeof().toInt
@@ -335,6 +333,10 @@ given FirrtlNameKindApi with
       case i if i == FIRRTL_NAME_KIND_DROPPABLE_NAME()   => FirrtlNameKind.Droppable
       case i if i == FIRRTL_NAME_KIND_INTERESTING_NAME() => FirrtlNameKind.Interesting
   extension (ref: FirrtlNameKind)
+    inline def attrGetNameKind(
+      using arena: Arena,
+      context:     Context
+    ): Attribute = Attribute(firrtlAttrGetNameKind(arena, context.segment, ref.toNative))
     inline def toNative: Int =
       ref match
         case FirrtlNameKind.Droppable   => FIRRTL_NAME_KIND_DROPPABLE_NAME()

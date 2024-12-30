@@ -1,0 +1,6 @@
+class AugmentedBundleTypeAttr
+class AugmentedGroundTypeAttr
+class AugmentedVectorTypeAttr
+class InternalPathAttr
+class MemoryInitAttr
+class ParamDeclAttr

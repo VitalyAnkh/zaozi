@@ -42,16 +42,16 @@ trait AttributeApi:
     using arena: Arena,
     context:     Context
   ): Attribute
-  extension (string: String)
+  extension (string:         String)
     inline def importAnnotationsFromJSONRaw(
       using arena: Arena,
       context:     Context
     ): Attribute
   extension (portDirections: Seq[FirrtlDirection])
     inline def attrGetPortDirs(
-                            using arena: Arena,
-                            context: Context
-                          ): Attribute
+      using arena: Arena,
+      context:     Context
+    ): Attribute
 end AttributeApi
 
 trait ModuleApi:
@@ -206,9 +206,12 @@ trait FirrtlBundleFieldApi extends HasSegment[FirrtlBundleField] with HasSizeOf[
     context:     Context
   ): FirrtlBundleField
   extension (firrtlBundleField: FirrtlBundleField)
-    inline def getName()(using arena: Arena): String
+    inline def getName(
+    )(
+      using arena: Arena
+    ):                      String
     inline def getIsFlip(): Boolean
-    inline def getType(): Type
+    inline def getType():   Type
 end FirrtlBundleFieldApi
 
 trait FirrtlClassElementApi extends HasSegment[FirrtlClassElement] with HasSizeOf[FirrtlClassElement]:
@@ -233,7 +236,12 @@ enum FirrtlNameKind:
   case Droppable
   case Interesting
 end FirrtlNameKind
-trait FirrtlNameKindApi extends HasSizeOf[FirrtlNameKind] with EnumHasToNative[FirrtlNameKind]
+trait FirrtlNameKindApi extends HasSizeOf[FirrtlNameKind] with EnumHasToNative[FirrtlNameKind]:
+  extension (ref: FirrtlNameKind)
+    inline def attrGetNameKind(
+      using arena: Arena,
+      context:     Context
+    ): Attribute
 
 enum FirrtlDirection:
   case In
