@@ -13,6 +13,7 @@ object v {
   val upickle = ivy"com.lihaoyi::upickle:4.0.2"
   val utest = ivy"com.lihaoyi::utest:0.8.4"
   val sourcecode = ivy"com.lihaoyi::sourcecode:0.4.2"
+  val pprint = ivy"com.lihaoyi::pprint:0.9.0"
 }
 
 object zaozi extends ScalaModule with ScalafmtModule {
@@ -91,31 +92,28 @@ object circtpanamabinding extends JavaModule {
 
   def includeConstants =
     T.input(os.read.lines(millSourcePath / "includeConstants.txt").filter(s => s.nonEmpty && !s.startsWith("#")))
-
   def includeFunctions =
     T.input(os.read.lines(millSourcePath / "includeFunctions.txt").filter(s => s.nonEmpty && !s.startsWith("#")))
-
   def includeStructs =
     T.input(os.read.lines(millSourcePath / "includeStructs.txt").filter(s => s.nonEmpty && !s.startsWith("#")))
-
   def includeTypedefs =
     T.input(os.read.lines(millSourcePath / "includeTypedefs.txt").filter(s => s.nonEmpty && !s.startsWith("#")))
-
   def includeUnions =
     T.input(os.read.lines(millSourcePath / "includeUnions.txt").filter(s => s.nonEmpty && !s.startsWith("#")))
-
   def includeVars =
     T.input(os.read.lines(millSourcePath / "includeVars.txt").filter(s => s.nonEmpty && !s.startsWith("#")))
-
   def linkLibraries =
     T.input(os.read.lines(millSourcePath / "linkLibraries.txt").filter(s => s.nonEmpty && !s.startsWith("#")))
-
   def target = T("org.llvm.circt")
-
   def headerClassName = T("CAPI")
 
   def header = T(PathRef(millSourcePath / "jextract-headers.h"))
+  def circtInstallPath = T(os.Path(T.ctx().env.getOrElse("CIRCT_INSTALL_PATH", "CIRCT_INSTALL_PATH not found, you are not in the nix env?")))
+  def jextractBinary = T(os.Path(T.ctx().env.getOrElse("JEXTRACT_INSTALL_PATH", "JEXTRACT_INSTALL_PATH not found, you are not in the nix env?")) / "bin" / "jextract")
+  def includePaths = T(Seq(PathRef(circtInstallPath() / "include")))
+  def libraryPaths = T(Seq(PathRef(circtInstallPath() / "lib")))
 }
+
 
 object mlirlib extends ScalaModule with ScalafmtModule {
   def scalaVersion = T(v.scala)
