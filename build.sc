@@ -91,22 +91,32 @@ object circtpanamabinding extends JavaModule {
 
   def includeConstants =
     T.input(os.read.lines(millSourcePath / "includeConstants.txt").filter(s => s.nonEmpty && !s.startsWith("#")))
+
   def includeFunctions =
     T.input(os.read.lines(millSourcePath / "includeFunctions.txt").filter(s => s.nonEmpty && !s.startsWith("#")))
+
   def includeStructs =
     T.input(os.read.lines(millSourcePath / "includeStructs.txt").filter(s => s.nonEmpty && !s.startsWith("#")))
+
   def includeTypedefs =
     T.input(os.read.lines(millSourcePath / "includeTypedefs.txt").filter(s => s.nonEmpty && !s.startsWith("#")))
+
   def includeUnions =
     T.input(os.read.lines(millSourcePath / "includeUnions.txt").filter(s => s.nonEmpty && !s.startsWith("#")))
+
   def includeVars =
     T.input(os.read.lines(millSourcePath / "includeVars.txt").filter(s => s.nonEmpty && !s.startsWith("#")))
+
   def linkLibraries =
     T.input(os.read.lines(millSourcePath / "linkLibraries.txt").filter(s => s.nonEmpty && !s.startsWith("#")))
+
   def target = T("org.llvm.circt")
+
   def headerClassName = T("CAPI")
 
   def header = T(PathRef(millSourcePath / "jextract-headers.h"))
+}
+
 object mlirlib extends ScalaModule with ScalafmtModule {
   def scalaVersion = T(v.scala)
 
