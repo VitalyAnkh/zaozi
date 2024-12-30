@@ -54,7 +54,7 @@ trait AttributeApi extends HasSegment[Attribute] with HasSizeOf[Attribute]:
       using arena: Arena,
       context:     Context
     ): Attribute
-    inline def toSymbolRefAttribute(
+    inline def flatSymbolRefAttrGet(
       using arena: Arena,
       context:     Context
     ): Attribute

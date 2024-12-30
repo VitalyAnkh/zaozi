@@ -713,7 +713,7 @@ given AttributeApi with
       using arena: Arena,
       context:     Context
     ): Attribute = Attribute(mlirStringAttrGet(arena, context.segment, string.toStringRef.segment))
-    inline def toSymbolRefAttribute(
+    inline def flatSymbolRefAttrGet(
       using arena: Arena,
       context:     Context
     ): Attribute = Attribute(mlirFlatSymbolRefAttrGet(arena, context.segment, string.toStringRef.segment))
