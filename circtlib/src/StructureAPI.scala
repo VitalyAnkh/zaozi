@@ -6,9 +6,9 @@ import org.llvm.mlir.scalalib.{Module as MlirModule, *, given}
 
 import java.lang.foreign.Arena
 
-class Circuit(val operation: Operation)
-trait CircuitApi:
-  inline def circuit(
+class Circuit(val _operation: Operation)
+trait CircuitApi extends HasOperation[Circuit]:
+  inline def op(
     circuitName: String
   )(
     using arena: Arena,
@@ -26,14 +26,14 @@ trait CircuitApi:
     ): Unit
 end CircuitApi
 
-class Class(val operation: Operation)
-class ExtClass(val operation: Operation)
-class ExtModule(val operation: Operation)
-class IntModule(val operation: Operation)
-class MemModule(val operation: Operation)
-class Module(val operation: Operation)
-trait ModuleApi:
-  inline def module(
+class Class(val _operation: Operation)
+class ExtClass(val _operation: Operation)
+class ExtModule(val _operation: Operation)
+class IntModule(val _operation: Operation)
+class MemModule(val _operation: Operation)
+class Module(val _operation: Operation)
+trait ModuleApi extends HasOperation[Module]:
+  inline def op(
     name:        String,
     location:    Location,
     interface:   Seq[(FirrtlBundleField, Location)]
@@ -46,16 +46,6 @@ trait ModuleApi:
     inline def block(
       using Arena
     ): Block
-    inline def appendToCircuit(
-    )(
-      using arena: Arena,
-      circuit:     Circuit
-    ): Unit
-    inline def addOperation(
-      operation: Operation
-    )(
-      using Arena
-    ): Unit
     inline def getIO(
       idx: Long
     )(
@@ -63,7 +53,7 @@ trait ModuleApi:
     ): Value
 end ModuleApi
 
-class Formal(val operation: Operation)
-class Layer(val operation: Operation)
-class OptionCase(val operation: Operation)
-class Option(val operation: Operation)
+class Formal(val _operation: Operation)
+class Layer(val _operation: Operation)
+class OptionCase(val _operation: Operation)
+class Option(val _operation: Operation)

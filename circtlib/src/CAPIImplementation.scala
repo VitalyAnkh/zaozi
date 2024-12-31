@@ -78,8 +78,8 @@ given AttributeApi with
         tpe.segment,
         value match
           case string: String => string.stringAttrGet.segment
-          case bigInt: BigInt => bigInt.toIntegerAttribute(bigInt.bitLength.toIntegerType).segment
-          case double: Double => double.toDoubleAttribute(summon[org.llvm.mlir.scalalib.TypeApi].f64Type).segment
+          case bigInt: BigInt => bigInt.attrGetIntegerFromString(bigInt.bitLength.integerTypeGet).segment
+          case double: Double => double.toDoubleAttribute(summon[org.llvm.mlir.scalalib.TypeApi].f64TypeGet).segment
       )
     )
   extension (string:           String)
@@ -95,7 +95,7 @@ given AttributeApi with
       )
       attribute
   extension (bigInt:           BigInt)
-    inline def toIntegerAttribute(
+    inline def attrGetIntegerFromString(
       tpe:         Type
     )(
       using arena: Arena
@@ -104,7 +104,9 @@ given AttributeApi with
         firrtlAttrGetIntegerFromString(
           arena,
           tpe.segment,
-          bigInt.bitLength,
+          // TODO: error: operand must have integer type and amount must be >= 0
+          //       why?
+          scala.math.max(bigInt.bitLength, 32),
           bigInt.toString(10).toStringRef.segment,
           10
         )

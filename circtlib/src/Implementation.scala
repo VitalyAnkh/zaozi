@@ -8,7 +8,7 @@ import java.lang.foreign.Arena
 
 // Structure
 given CircuitApi with
-  inline def circuit(
+  inline def op(
     circuitName: String
   )(
     using arena: Arena,
@@ -40,7 +40,7 @@ given CircuitApi with
         )
     )
   )
-  extension (c: Circuit)
+  extension (c:   Circuit)
     inline def block(
       using Arena
     ): Block = c.operation.getFirstRegion().getFirstBlock()
@@ -50,9 +50,10 @@ given CircuitApi with
       module:      MlirModule
     ): Unit =
       module.getBody.appendOwnedOperation(c.operation)
+  extension (ref: Circuit) def operation: Operation = ref._operation
 end given
 given ModuleApi with
-  inline def module(
+  inline def op(
     name:        String,
     location:    Location,
     interface:   Seq[(FirrtlBundleField, Location)]
@@ -119,33 +120,23 @@ given ModuleApi with
         )
     )
   )
-  extension (m: Module)
+  extension (ref: Module)
     inline def block(
       using Arena
-    ): Block = m.operation.getFirstRegion().getFirstBlock()
-
-    inline def appendToCircuit(
-    )(
-      using arena: Arena,
-      circuit:     Circuit
-    ): Unit = circuit.block.appendOwnedOperation(m.operation)
-
-    inline def addOperation(
-      operation: Operation
-    )(
-      using Arena
-    ): Unit = m.block.appendOwnedOperation(operation)
+    ): Block = operation.getFirstRegion().getFirstBlock()
 
     inline def getIO(
       idx: Long
     )(
       using Arena
-    ): Value = m.block.getArgument(idx)
+    ): Value = block.getArgument(idx)
+
+    inline def operation: Operation = ref._operation
 end given
 
 // Declarations
 given InstanceApi with
-  inline def instance(
+  inline def op(
     moduleName:   String,
     instanceName: String,
     nameKind:     FirrtlNameKind,
@@ -153,10 +144,9 @@ given InstanceApi with
     interface:    Seq[FirrtlBundleField]
   )(
     using arena:  Arena,
-    context:      Context,
-    module:       Module
+    context:      Context
   ): Instance =
-    val instance = new Instance(
+    new Instance(
       summon[OperationApi].operationCreate(
         name = "firrtl.instance",
         location = location,
@@ -197,24 +187,22 @@ given InstanceApi with
         resultsTypes = Some(interface.map(_.getType()))
       )
     )
-    module.addOperation(instance.operation)
-    instance
+  extension (ref: Instance) def operation: Operation = ref._operation
 end given
-given RegApi with
-  inline def reg(
+
+given NodeApi with
+  inline def op(
     name:        String,
     location:    Location,
     nameKind:    FirrtlNameKind,
-    tpe:         Type,
-    clock:       Value
+    input:       Value
   )(
     using arena: Arena,
-    context:     Context,
-    block:       Block
-  ): Reg =
-    val reg = Reg(
+    context:     Context
+  ): Node =
+    Node(
       summon[OperationApi].operationCreate(
-        name = "firrtl.reg",
+        name = "firrtl.node",
         location = location,
         namedAttributes =
           val namedAttributeApi = summon[NamedAttributeApi]
@@ -231,15 +219,50 @@ given RegApi with
             // namedAttributeApi.namedAttributeGet("forceable".identifierGet, ???)
           )
         ,
-        operands = Seq(clock),
-        resultsTypes = Some(Seq(tpe))
+        operands = Seq(input),
+        inferredResultsTypes = Some(1)
       )
     )
-    block.appendOwnedOperation(reg.operation)
-    reg
+  extension (ref: Node) def operation: Operation = ref._operation
+end given
+
+given RegApi with
+  inline def op(
+    name:        String,
+    location:    Location,
+    nameKind:    FirrtlNameKind,
+    tpe:         Type,
+    clock:       Value
+  )(
+    using arena: Arena,
+    context:     Context
+  ): Reg = Reg(
+    summon[OperationApi].operationCreate(
+      name = "firrtl.reg",
+      location = location,
+      namedAttributes =
+        val namedAttributeApi = summon[NamedAttributeApi]
+        Seq(
+          // ::mlir::StringAttr
+          namedAttributeApi.namedAttributeGet("name".identifierGet, name.stringAttrGet),
+          // ::circt::firrtl::NameKindEnumAttr
+          namedAttributeApi.namedAttributeGet("nameKind".identifierGet, nameKind.attrGetNameKind)
+          // ::mlir::ArrayAttr
+          // namedAttributeApi.namedAttributeGet("annotations".identifierGet, ???),
+          // ::circt::hw::InnerSymAttr
+          // namedAttributeApi.namedAttributeGet("inner_sym".identifierGet, ???),
+          // ::mlir::UnitAttr
+          // namedAttributeApi.namedAttributeGet("forceable".identifierGet, ???)
+        )
+      ,
+      operands = Seq(clock),
+      resultsTypes = Some(Seq(tpe))
+    )
+  )
+  extension (ref: Reg) def operation: Operation = ref._operation
 end given
 given RegResetApi with
-  inline def regReset(
+  inline def op(
     name:        String,
     location:    Location,
     nameKind:    FirrtlNameKind,
@@ -248,47 +271,43 @@ given RegResetApi with
     reset:       Value
   )(
     using arena: Arena,
-    context:     Context,
-    block:       Block
-  ): RegReset =
-    val regReset = RegReset(
-      summon[OperationApi].operationCreate(
-        name = "firrtl.regreset",
-        location = location,
-        namedAttributes =
-          val namedAttributeApi = summon[NamedAttributeApi]
-          Seq(
-            // ::mlir::StringAttr
-            namedAttributeApi.namedAttributeGet("name".identifierGet, name.stringAttrGet),
-            // ::circt::firrtl::NameKindEnumAttr
-            namedAttributeApi.namedAttributeGet("nameKind".identifierGet, nameKind.attrGetNameKind)
-            // ::mlir::ArrayAttr
-            // namedAttributeApi.namedAttributeGet("annotations".identifierGet, ???),
-            // ::circt::hw::InnerSymAttr
-            // namedAttributeApi.namedAttributeGet("inner_sym".identifierGet, ???),
-            // ::mlir::UnitAttr
-            // namedAttributeApi.namedAttributeGet("forceable".identifierGet, ???)
-          )
-        ,
-        operands = Seq(clock, reset),
-        resultsTypes = Some(Seq(tpe))
-      )
+    context:     Context
+  ): RegReset = RegReset(
+    summon[OperationApi].operationCreate(
+      name = "firrtl.regreset",
+      location = location,
+      namedAttributes =
+        val namedAttributeApi = summon[NamedAttributeApi]
+        Seq(
+          // ::mlir::StringAttr
+          namedAttributeApi.namedAttributeGet("name".identifierGet, name.stringAttrGet),
+          // ::circt::firrtl::NameKindEnumAttr
+          namedAttributeApi.namedAttributeGet("nameKind".identifierGet, nameKind.attrGetNameKind)
+          // ::mlir::ArrayAttr
+          // namedAttributeApi.namedAttributeGet("annotations".identifierGet, ???),
+          // ::circt::hw::InnerSymAttr
+          // namedAttributeApi.namedAttributeGet("inner_sym".identifierGet, ???),
+          // ::mlir::UnitAttr
+          // namedAttributeApi.namedAttributeGet("forceable".identifierGet, ???)
+        )
+      ,
+      operands = Seq(clock, reset),
+      resultsTypes = Some(Seq(tpe))
     )
-    block.appendOwnedOperation(regReset.operation)
-    regReset
+  )
+  extension (ref: RegReset) def operation: Operation = ref._operation
 end given
 given WireApi with
-  def wire(
+  def op(
     name:        String,
     location:    Location,
     nameKind:    FirrtlNameKind,
     tpe:         Type
   )(
     using arena: Arena,
-    context:     Context,
-    block:       Block
+    context:     Context
   ): Wire =
-    val wire = Wire(
+    Wire(
       summon[OperationApi].operationCreate(
         name = "firrtl.wire",
         location = location,
@@ -310,49 +329,44 @@ given WireApi with
         resultsTypes = Some(Seq(tpe))
       )
     )
-    block.appendOwnedOperation(wire.operation)
-    wire
   extension (ref: Wire)
     def result(
       using Arena
     ): Value = ref.operation.getResult(0)
-
+  extension (ref: Wire) def operation: Operation = ref._operation
 end given
 
 // Statements
 given ConnectApi with
-  inline def connect(
+  inline def op(
     src:         Value,
     dst:         Value,
     location:    Location
   )(
     using arena: Arena,
-    context:     Context,
-    block:       Block
+    context:     Context
   ): Connect =
-    val op = Connect(
+    Connect(
       summon[OperationApi].operationCreate(
         name = "firrtl.connect",
         location = location,
         operands = Seq(dst, src)
       )
     )
-    block.appendOwnedOperation(op.operation)
-    op
+  extension (ref: Connect) def operation: Operation = ref._operation
 end given
 
 // Expression
 given AddPrimApi with
-  def addPrim(
+  def op(
     lhs:         Value,
     rhs:         Value,
     location:    Location
   )(
     using arena: Arena,
-    context:     Context,
-    block:       Block
+    context:     Context
   ): AddPrim =
-    val op = AddPrim(
+    AddPrim(
       summon[OperationApi].operationCreate(
         name = "firrtl.add",
         location = location,
@@ -360,21 +374,19 @@ given AddPrimApi with
         inferredResultsTypes = Some(1)
       )
     )
-    block.appendOwnedOperation(op.operation)
-    op
+  extension (ref: AddPrim) def operation: Operation = ref._operation
 end given
 
 given AndPrimApi with
-  def andPrim(
+  def op(
     lhs:         Value,
     rhs:         Value,
     location:    Location
   )(
     using arena: Arena,
-    context:     Context,
-    block:       Block
+    context:     Context
   ): AndPrim =
-    val op = AndPrim(
+    AndPrim(
       summon[OperationApi].operationCreate(
         name = "firrtl.and",
         location = location,
@@ -382,41 +394,36 @@ given AndPrimApi with
         inferredResultsTypes = Some(1)
       )
     )
-    block.appendOwnedOperation(op.operation)
-    op
+  extension (ref: AndPrim) def operation: Operation = ref._operation
 end given
 
 given AndRPrimApi with
-  def andRPrim(
+  def op(
     input:       Value,
     location:    Location
   )(
     using arena: Arena,
-    context:     Context,
-    block:       Block
-  ): AndRPrim =
-    val op = AndRPrim(
-      summon[OperationApi].operationCreate(
-        name = "firrtl.andr",
-        location = location,
-        operands = Seq(input),
-        inferredResultsTypes = Some(1)
-      )
+    context:     Context
+  ): AndRPrim = AndRPrim(
+    summon[OperationApi].operationCreate(
+      name = "firrtl.andr",
+      location = location,
+      operands = Seq(input),
+      inferredResultsTypes = Some(1)
     )
-    block.appendOwnedOperation(op.operation)
-    op
+  )
+  extension (ref: AndRPrim) def operation: Operation = ref._operation
 end given
 
 given AsAsyncResetPrimApi with
-  def asAsyncResetPrim(
+  def op(
     input:       Value,
     location:    Location
   )(
     using arena: Arena,
-    context:     Context,
-    block:       Block
+    context:     Context
   ): AsAsyncResetPrim =
-    val op = AsAsyncResetPrim(
+    AsAsyncResetPrim(
       summon[OperationApi].operationCreate(
         name = "firrtl.asAsyncReset",
         location = location,
@@ -424,20 +431,18 @@ given AsAsyncResetPrimApi with
         inferredResultsTypes = Some(1)
       )
     )
-    block.appendOwnedOperation(op.operation)
-    op
+  extension (ref: AsAsyncResetPrim) def operation: Operation = ref._operation
 end given
 
 given AsClockPrimApi with
-  def AsClockPrimPrim(
+  def op(
     input:       Value,
     location:    Location
   )(
     using arena: Arena,
-    context:     Context,
-    block:       Block
+    context:     Context
   ): AsClockPrim =
-    val op = AsClockPrim(
+    AsClockPrim(
       summon[OperationApi].operationCreate(
         name = "firrtl.asClock",
         location = location,
@@ -445,20 +450,18 @@ given AsClockPrimApi with
         inferredResultsTypes = Some(1)
       )
     )
-    block.appendOwnedOperation(op.operation)
-    op
+  extension (ref: AsClockPrim) def operation: Operation = ref._operation
 end given
 
 given AsSIntPrimApi with
-  def asSIntPrim(
+  def op(
     input:       Value,
     location:    Location
   )(
     using arena: Arena,
-    context:     Context,
-    block:       Block
+    context:     Context
   ): AsSIntPrim =
-    val op = AsSIntPrim(
+    AsSIntPrim(
       summon[OperationApi].operationCreate(
         name = "firrtl.asSInt",
         location = location,
@@ -466,20 +469,18 @@ given AsSIntPrimApi with
         inferredResultsTypes = Some(1)
       )
     )
-    block.appendOwnedOperation(op.operation)
-    op
+  extension (ref: AsSIntPrim) def operation: Operation = ref._operation
 end given
 
 given AsUIntPrimApi with
-  def asUIntPrim(
+  def op(
     input:       Value,
     location:    Location
   )(
     using arena: Arena,
-    context:     Context,
-    block:       Block
+    context:     Context
   ): AsUIntPrim =
-    val asUIntPrim = AsUIntPrim(
+    AsUIntPrim(
       summon[OperationApi].operationCreate(
         name = "firrtl.asUInt",
         location = location,
@@ -487,22 +488,20 @@ given AsUIntPrimApi with
         inferredResultsTypes = Some(1)
       )
     )
-    block.appendOwnedOperation(asUIntPrim.operation)
-    asUIntPrim
+  extension (ref: AsUIntPrim) def operation: Operation = ref._operation
 end given
 
 given BitsPrimApi with
-  def bitsPrim(
+  def op(
     input:       Value,
-    hi:          Int,
-    lo:          Int,
+    hi:          BigInt,
+    lo:          BigInt,
     location:    Location
   )(
     using arena: Arena,
-    context:     Context,
-    block:       Block
+    context:     Context
   ): BitsPrim =
-    val op = BitsPrim(
+    BitsPrim(
       summon[OperationApi].operationCreate(
         name = "firrtl.bits",
         location = location,
@@ -510,30 +509,32 @@ given BitsPrimApi with
           val namedAttributeApi = summon[NamedAttributeApi]
           Seq(
             // ::mlir::IntegerAttr
-            namedAttributeApi.namedAttributeGet("hi".identifierGet, hi.toLong.toIntegerAttribute(32.toUnsignedInteger)),
+            namedAttributeApi.namedAttributeGet(
+              "hi".identifierGet,
+              hi.toLong.toIntegerAttribute(32.integerTypeUnsignedGet)
+            ),
             // ::mlir::IntegerAttr
-            namedAttributeApi.namedAttributeGet("lo".identifierGet, lo.toLong.toIntegerAttribute(32.toUnsignedInteger))
+            namedAttributeApi
+              .namedAttributeGet("lo".identifierGet, lo.toLong.toIntegerAttribute(32.integerTypeUnsignedGet))
           )
         ,
         operands = Seq(input),
         inferredResultsTypes = Some(1)
       )
     )
-    block.appendOwnedOperation(op.operation)
-    op
+  extension (ref: BitsPrim) def operation: Operation = ref._operation
 end given
 
 given CatPrimApi with
-  def catPrim(
+  def op(
     lhs:         Value,
     rhs:         Value,
     location:    Location
   )(
     using arena: Arena,
-    context:     Context,
-    block:       Block
-  ): BitsPrim =
-    val op = BitsPrim(
+    context:     Context
+  ): CatPrim =
+    CatPrim(
       summon[OperationApi].operationCreate(
         name = "firrtl.cat",
         location = location,
@@ -541,21 +542,21 @@ given CatPrimApi with
         inferredResultsTypes = Some(1)
       )
     )
-    block.appendOwnedOperation(op.operation)
-    op
+  extension (ref: CatPrim) def operation: Operation = ref._operation
 end given
 
 given ConstantApi with
-  def constant(
+  def op(
     input:       BigInt,
-    width:       Int,
+    signed:      Boolean,
     location:    Location
   )(
     using arena: Arena,
-    context:     Context,
-    block:       Block
-  ): BitsPrim =
-    val op = BitsPrim(
+    context:     Context
+  ): Constant =
+    if (!signed)
+      require(input >= 0)
+    Constant(
       summon[OperationApi].operationCreate(
         name = "firrtl.constant",
         location = location,
@@ -563,26 +564,34 @@ given ConstantApi with
           val namedAttributeApi = summon[NamedAttributeApi]
           Seq(
             // ::mlir::IntegerAttr
-            namedAttributeApi.namedAttributeGet("value".identifierGet, input.toIntegerAttribute(width.toIntegerType))
+            namedAttributeApi
+              .namedAttributeGet(
+                "value".identifierGet,
+                input.attrGetIntegerFromString(
+                  if (signed) input.bitLength.integerTypeSignedGet else input.bitLength.integerTypeUnsignedGet
+                )
+              )
           )
         ,
-        inferredResultsTypes = Some(1)
+        resultsTypes = Some(
+          Seq(
+            if (signed) input.bitLength.getSInt else input.bitLength.getUInt
+          )
+        )
       )
     )
-    block.appendOwnedOperation(op.operation)
-    op
+  extension (ref: Constant) def operation: Operation = ref._operation
 end given
 
 given CvtPrimApi with
-  def cvtPrim(
+  def op(
     input:       Value,
     location:    Location
   )(
     using arena: Arena,
-    context:     Context,
-    block:       Block
+    context:     Context
   ): CvtPrim =
-    val op = CvtPrim(
+    CvtPrim(
       summon[OperationApi].operationCreate(
         name = "firrtl.cvt",
         location = location,
@@ -590,21 +599,19 @@ given CvtPrimApi with
         inferredResultsTypes = Some(1)
       )
     )
-    block.appendOwnedOperation(op.operation)
-    op
+  extension (ref: CvtPrim) def operation: Operation = ref._operation
 end given
 
 given DShlPrimApi with
-  def dShlPrim(
+  def op(
     lhs:         Value,
     rhs:         Value,
     location:    Location
   )(
     using arena: Arena,
-    context:     Context,
-    block:       Block
+    context:     Context
   ): DShlPrim =
-    val op = DShlPrim(
+    DShlPrim(
       summon[OperationApi].operationCreate(
         name = "firrtl.dshl",
         location = location,
@@ -612,21 +619,19 @@ given DShlPrimApi with
         inferredResultsTypes = Some(1)
       )
     )
-    block.appendOwnedOperation(op.operation)
-    op
+  extension (ref: DShlPrim) def operation: Operation = ref._operation
 end given
 
 given DShrPrimApi with
-  def dShrPrim(
+  def op(
     lhs:         Value,
     rhs:         Value,
     location:    Location
   )(
     using arena: Arena,
-    context:     Context,
-    block:       Block
+    context:     Context
   ): DShrPrim =
-    val op = DShrPrim(
+    DShrPrim(
       summon[OperationApi].operationCreate(
         name = "firrtl.dshr",
         location = location,
@@ -634,21 +639,19 @@ given DShrPrimApi with
         inferredResultsTypes = Some(1)
       )
     )
-    block.appendOwnedOperation(op.operation)
-    op
+  extension (ref: DShrPrim) def operation: Operation = ref._operation
 end given
 
 given DivPrimApi with
-  def divPrim(
+  def op(
     lhs:         Value,
     rhs:         Value,
     location:    Location
   )(
     using arena: Arena,
-    context:     Context,
-    block:       Block
+    context:     Context
   ): DivPrim =
-    val op = DivPrim(
+    DivPrim(
       summon[OperationApi].operationCreate(
         name = "firrtl.div",
         location = location,
@@ -656,21 +659,19 @@ given DivPrimApi with
         inferredResultsTypes = Some(1)
       )
     )
-    block.appendOwnedOperation(op.operation)
-    op
+  extension (ref: DivPrim) def operation: Operation = ref._operation
 end given
 
 given EQPrimApi with
-  def eqPrim(
+  def op(
     lhs:         Value,
     rhs:         Value,
     location:    Location
   )(
     using arena: Arena,
-    context:     Context,
-    block:       Block
+    context:     Context
   ): EQPrim =
-    val op = EQPrim(
+    EQPrim(
       summon[OperationApi].operationCreate(
         name = "firrtl.eq",
         location = location,
@@ -678,21 +679,19 @@ given EQPrimApi with
         inferredResultsTypes = Some(1)
       )
     )
-    block.appendOwnedOperation(op.operation)
-    op
+  extension (ref: EQPrim) def operation: Operation = ref._operation
 end given
 
 given GEQPrimApi with
-  def geqPrim(
+  def op(
     lhs:         Value,
     rhs:         Value,
     location:    Location
   )(
     using arena: Arena,
-    context:     Context,
-    block:       Block
+    context:     Context
   ): GEQPrim =
-    val op = GEQPrim(
+    GEQPrim(
       summon[OperationApi].operationCreate(
         name = "firrtl.geq",
         location = location,
@@ -700,21 +699,19 @@ given GEQPrimApi with
         inferredResultsTypes = Some(1)
       )
     )
-    block.appendOwnedOperation(op.operation)
-    op
+  extension (ref: GEQPrim) def operation: Operation = ref._operation
 end given
 
 given GTPrimApi with
-  def gtPrim(
+  def op(
     lhs:         Value,
     rhs:         Value,
     location:    Location
   )(
     using arena: Arena,
-    context:     Context,
-    block:       Block
+    context:     Context
   ): GTPrim =
-    val op = GTPrim(
+    GTPrim(
       summon[OperationApi].operationCreate(
         name = "firrtl.gt",
         location = location,
@@ -722,21 +719,19 @@ given GTPrimApi with
         inferredResultsTypes = Some(1)
       )
     )
-    block.appendOwnedOperation(op.operation)
-    op
+  extension (ref: GTPrim) def operation: Operation = ref._operation
 end given
 
 given HeadPrimApi with
-  def headPrim(
+  def op(
     input:       Value,
     amount:      BigInt,
     location:    Location
   )(
     using arena: Arena,
-    context:     Context,
-    block:       Block
+    context:     Context
   ): HeadPrim =
-    val op = HeadPrim(
+    HeadPrim(
       summon[OperationApi].operationCreate(
         name = "firrtl.head",
         location = location,
@@ -745,27 +740,26 @@ given HeadPrimApi with
           val namedAttributeApi = summon[NamedAttributeApi]
           Seq(
             // ::mlir::IntegerAttr
-            namedAttributeApi.namedAttributeGet("amount".identifierGet, amount.toIntegerAttribute(32.toUnsignedInteger))
+            namedAttributeApi
+              .namedAttributeGet("amount".identifierGet, amount.attrGetIntegerFromString(32.integerTypeUnsignedGet))
           )
         ,
         inferredResultsTypes = Some(1)
       )
     )
-    block.appendOwnedOperation(op.operation)
-    op
+  extension (ref: HeadPrim) def operation: Operation = ref._operation
 end given
 
 given LEQPrimApi with
-  def leqPrim(
+  def op(
     lhs:         Value,
     rhs:         Value,
     location:    Location
   )(
     using arena: Arena,
-    context:     Context,
-    block:       Block
+    context:     Context
   ): LEQPrim =
-    val op = LEQPrim(
+    LEQPrim(
       summon[OperationApi].operationCreate(
         name = "firrtl.leq",
         location = location,
@@ -773,21 +767,19 @@ given LEQPrimApi with
         inferredResultsTypes = Some(1)
       )
     )
-    block.appendOwnedOperation(op.operation)
-    op
+  extension (ref: LEQPrim) def operation: Operation = ref._operation
 end given
 
 given LTPrimApi with
-  def ltPrim(
+  def op(
     lhs:         Value,
     rhs:         Value,
     location:    Location
   )(
     using arena: Arena,
-    context:     Context,
-    block:       Block
+    context:     Context
   ): LTPrim =
-    val op = LTPrim(
+    LTPrim(
       summon[OperationApi].operationCreate(
         name = "firrtl.lt",
         location = location,
@@ -795,21 +787,19 @@ given LTPrimApi with
         inferredResultsTypes = Some(1)
       )
     )
-    block.appendOwnedOperation(op.operation)
-    op
+  extension (ref: LTPrim) def operation: Operation = ref._operation
 end given
 
 given MulPrimApi with
-  def mulPrim(
+  def op(
     lhs:         Value,
     rhs:         Value,
     location:    Location
   )(
     using arena: Arena,
-    context:     Context,
-    block:       Block
+    context:     Context
   ): MulPrim =
-    val op = MulPrim(
+    MulPrim(
       summon[OperationApi].operationCreate(
         name = "firrtl.mul",
         location = location,
@@ -817,22 +807,20 @@ given MulPrimApi with
         inferredResultsTypes = Some(1)
       )
     )
-    block.appendOwnedOperation(op.operation)
-    op
+  extension (ref: MulPrim) def operation: Operation = ref._operation
 end given
 
 given MuxPrimApi with
-  def muxPrim(
+  def op(
     sel:         Value,
     high:        Value,
     low:         Value,
     location:    Location
   )(
     using arena: Arena,
-    context:     Context,
-    block:       Block
+    context:     Context
   ): MuxPrim =
-    val op = MuxPrim(
+    MuxPrim(
       summon[OperationApi].operationCreate(
         name = "firrtl.mux",
         location = location,
@@ -840,8 +828,7 @@ given MuxPrimApi with
         inferredResultsTypes = Some(1)
       )
     )
-    block.appendOwnedOperation(op.operation)
-    op
+  extension (ref: MuxPrim) def operation: Operation = ref._operation
 end given
 
 given NEQPrimApi with
@@ -851,10 +838,9 @@ given NEQPrimApi with
     location:    Location
   )(
     using arena: Arena,
-    context:     Context,
-    block:       Block
+    context:     Context
   ): NEQPrim =
-    val op = NEQPrim(
+    NEQPrim(
       summon[OperationApi].operationCreate(
         name = "firrtl.neq",
         location = location,
@@ -862,20 +848,18 @@ given NEQPrimApi with
         inferredResultsTypes = Some(1)
       )
     )
-    block.appendOwnedOperation(op.operation)
-    op
+  extension (ref: NEQPrim) def operation: Operation = ref._operation
 end given
 
 given NegPrimApi with
-  def negPrim(
+  def op(
     input:       Value,
     location:    Location
   )(
     using arena: Arena,
-    context:     Context,
-    block:       Block
+    context:     Context
   ): NegPrim =
-    val op = NegPrim(
+    NegPrim(
       summon[OperationApi].operationCreate(
         name = "firrtl.neg",
         location = location,
@@ -883,20 +867,18 @@ given NegPrimApi with
         inferredResultsTypes = Some(1)
       )
     )
-    block.appendOwnedOperation(op.operation)
-    op
+  extension (ref: NegPrim) def operation: Operation = ref._operation
 end given
 
 given NotPrimApi with
-  def notPrim(
+  def op(
     input:       Value,
     location:    Location
   )(
     using arena: Arena,
-    context:     Context,
-    block:       Block
+    context:     Context
   ): NotPrim =
-    val op = NotPrim(
+    NotPrim(
       summon[OperationApi].operationCreate(
         name = "firrtl.not",
         location = location,
@@ -904,21 +886,19 @@ given NotPrimApi with
         inferredResultsTypes = Some(1)
       )
     )
-    block.appendOwnedOperation(op.operation)
-    op
+  extension (ref: NotPrim) def operation: Operation = ref._operation
 end given
 
 given OrPrimApi with
-  def orPrim(
+  def op(
     lhs:         Value,
     rhs:         Value,
     location:    Location
   )(
     using arena: Arena,
-    context:     Context,
-    block:       Block
+    context:     Context
   ): OrPrim =
-    val op = OrPrim(
+    OrPrim(
       summon[OperationApi].operationCreate(
         name = "firrtl.or",
         location = location,
@@ -926,20 +906,18 @@ given OrPrimApi with
         inferredResultsTypes = Some(1)
       )
     )
-    block.appendOwnedOperation(op.operation)
-    op
+  extension (ref: OrPrim) def operation: Operation = ref._operation
 end given
 
 given OrRPrimApi with
-  def orRPrim(
+  def op(
     input:       Value,
     location:    Location
   )(
     using arena: Arena,
-    context:     Context,
-    block:       Block
-  ): AndRPrim =
-    val op = AndRPrim(
+    context:     Context
+  ): OrRPrim =
+    OrRPrim(
       summon[OperationApi].operationCreate(
         name = "firrtl.orr",
         location = location,
@@ -947,21 +925,19 @@ given OrRPrimApi with
         inferredResultsTypes = Some(1)
       )
     )
-    block.appendOwnedOperation(op.operation)
-    op
+  extension (ref: OrRPrim) def operation: Operation = ref._operation
 end given
 
 given PadPrimApi with
-  def padPrim(
+  def op(
     input:       Value,
     amount:      BigInt,
     location:    Location
   )(
     using arena: Arena,
-    context:     Context,
-    block:       Block
+    context:     Context
   ): PadPrim =
-    val op = PadPrim(
+    PadPrim(
       summon[OperationApi].operationCreate(
         name = "firrtl.pad",
         location = location,
@@ -970,27 +946,26 @@ given PadPrimApi with
           val namedAttributeApi = summon[NamedAttributeApi]
           Seq(
             // ::mlir::IntegerAttr
-            namedAttributeApi.namedAttributeGet("amount".identifierGet, amount.toIntegerAttribute(32.toUnsignedInteger))
+            namedAttributeApi
+              .namedAttributeGet("amount".identifierGet, amount.attrGetIntegerFromString(32.integerTypeUnsignedGet))
           )
         ,
         inferredResultsTypes = Some(1)
       )
     )
-    block.appendOwnedOperation(op.operation)
-    op
+  extension (ref: PadPrim) def operation: Operation = ref._operation
 end given
 
 given RemPrimApi with
-  def remPrim(
+  def op(
     lhs:         Value,
     rhs:         Value,
     location:    Location
   )(
     using arena: Arena,
-    context:     Context,
-    block:       Block
-  ): DivPrim =
-    val op = DivPrim(
+    context:     Context
+  ): RemPrim =
+    RemPrim(
       summon[OperationApi].operationCreate(
         name = "firrtl.rem",
         location = location,
@@ -998,21 +973,19 @@ given RemPrimApi with
         inferredResultsTypes = Some(1)
       )
     )
-    block.appendOwnedOperation(op.operation)
-    op
+  extension (ref: RemPrim) def operation: Operation = ref._operation
 end given
 
 given ShlPrimApi with
-  def shlPrim(
+  def op(
     input:       Value,
     amount:      BigInt,
     location:    Location
   )(
     using arena: Arena,
-    context:     Context,
-    block:       Block
+    context:     Context
   ): ShlPrim =
-    val op = ShlPrim(
+    ShlPrim(
       summon[OperationApi].operationCreate(
         name = "firrtl.shl",
         location = location,
@@ -1021,27 +994,26 @@ given ShlPrimApi with
           val namedAttributeApi = summon[NamedAttributeApi]
           Seq(
             // ::mlir::IntegerAttr
-            namedAttributeApi.namedAttributeGet("amount".identifierGet, amount.toIntegerAttribute(32.toUnsignedInteger))
+            namedAttributeApi
+              .namedAttributeGet("amount".identifierGet, amount.attrGetIntegerFromString(32.integerTypeUnsignedGet))
           )
         ,
         inferredResultsTypes = Some(1)
       )
     )
-    block.appendOwnedOperation(op.operation)
-    op
+  extension (ref: ShlPrim) def operation: Operation = ref._operation
 end given
 
 given ShrPrimApi with
-  def shrPrim(
+  def op(
     input:       Value,
     amount:      BigInt,
     location:    Location
   )(
     using arena: Arena,
-    context:     Context,
-    block:       Block
+    context:     Context
   ): ShrPrim =
-    val op = ShrPrim(
+    ShrPrim(
       summon[OperationApi].operationCreate(
         name = "firrtl.shr",
         location = location,
@@ -1050,27 +1022,26 @@ given ShrPrimApi with
           val namedAttributeApi = summon[NamedAttributeApi]
           Seq(
             // ::mlir::IntegerAttr
-            namedAttributeApi.namedAttributeGet("amount".identifierGet, amount.toIntegerAttribute(32.toUnsignedInteger))
+            namedAttributeApi
+              .namedAttributeGet("amount".identifierGet, amount.attrGetIntegerFromString(32.integerTypeUnsignedGet))
           )
         ,
         inferredResultsTypes = Some(1)
       )
     )
-    block.appendOwnedOperation(op.operation)
-    op
+  extension (ref: ShrPrim) def operation: Operation = ref._operation
 end given
 
 given SubPrimApi with
-  def subPrim(
+  def op(
     lhs:         Value,
     rhs:         Value,
     location:    Location
   )(
     using arena: Arena,
-    context:     Context,
-    block:       Block
+    context:     Context
   ): SubPrim =
-    val op = SubPrim(
+    SubPrim(
       summon[OperationApi].operationCreate(
         name = "firrtl.sub",
         location = location,
@@ -1078,21 +1049,19 @@ given SubPrimApi with
         inferredResultsTypes = Some(1)
       )
     )
-    block.appendOwnedOperation(op.operation)
-    op
+  extension (ref: SubPrim) def operation: Operation = ref._operation
 end given
 
 given SubaccessApi with
-  def subaccess(
+  def op(
     input:       Value,
     index:       Value,
     location:    Location
   )(
     using arena: Arena,
-    context:     Context,
-    block:       Block
+    context:     Context
   ): Subaccess =
-    val op = Subaccess(
+    Subaccess(
       summon[OperationApi].operationCreate(
         name = "firrtl.subaccess",
         location = location,
@@ -1100,21 +1069,19 @@ given SubaccessApi with
         inferredResultsTypes = Some(1)
       )
     )
-    block.appendOwnedOperation(op.operation)
-    op
+  extension (ref: Subaccess) def operation: Operation = ref._operation
 end given
 
 given SubfieldApi with
-  def subfield(
+  def op(
     input:       Value,
     fieldIndex:  BigInt,
     location:    Location
   )(
     using arena: Arena,
-    context:     Context,
-    block:       Block
+    context:     Context
   ): Subfield =
-    val op = Subfield(
+    Subfield(
       summon[OperationApi].operationCreate(
         name = "firrtl.subfield",
         location = location,
@@ -1124,27 +1091,28 @@ given SubfieldApi with
           Seq(
             // ::mlir::IntegerAttr
             namedAttributeApi
-              .namedAttributeGet("fieldIndex".identifierGet, fieldIndex.toIntegerAttribute(32.toUnsignedInteger))
+              .namedAttributeGet(
+                "fieldIndex".identifierGet,
+                fieldIndex.attrGetIntegerFromString(32.integerTypeUnsignedGet)
+              )
           )
         ,
         inferredResultsTypes = Some(1)
       )
     )
-    block.appendOwnedOperation(op.operation)
-    op
+  extension (ref: Subfield) def operation: Operation = ref._operation
 end given
 
 given SubindexApi with
-  def subindex(
+  def op(
     input:       Value,
     index:       BigInt,
     location:    Location
   )(
     using arena: Arena,
-    context:     Context,
-    block:       Block
+    context:     Context
   ): Subindex =
-    val op = Subindex(
+    Subindex(
       summon[OperationApi].operationCreate(
         name = "firrtl.subindex",
         location = location,
@@ -1154,29 +1122,27 @@ given SubindexApi with
           Seq(
             // ::mlir::IntegerAttr
             namedAttributeApi
-              .namedAttributeGet("index".identifierGet, index.toIntegerAttribute(32.toUnsignedInteger))
+              .namedAttributeGet("index".identifierGet, index.attrGetIntegerFromString(32.integerTypeUnsignedGet))
           )
         ,
         inferredResultsTypes = Some(1)
       )
     )
-    block.appendOwnedOperation(op.operation)
-    op
+  extension (ref: Subindex) def operation: Operation = ref._operation
 end given
 
 given TailPrimApi with
-  def tailPrim(
+  def op(
     input:       Value,
     amount:      BigInt,
     location:    Location
   )(
     using arena: Arena,
-    context:     Context,
-    block:       Block
+    context:     Context
   ): TailPrim =
-    val op = TailPrim(
+    TailPrim(
       summon[OperationApi].operationCreate(
-        name = "firrtl.amount",
+        name = "firrtl.tail",
         location = location,
         operands = Seq(input),
         namedAttributes =
@@ -1184,27 +1150,25 @@ given TailPrimApi with
           Seq(
             // ::mlir::IntegerAttr
             namedAttributeApi
-              .namedAttributeGet("amount".identifierGet, amount.toIntegerAttribute(32.toUnsignedInteger))
+              .namedAttributeGet("amount".identifierGet, amount.attrGetIntegerFromString(32.integerTypeUnsignedGet))
           )
         ,
         inferredResultsTypes = Some(1)
       )
     )
-    block.appendOwnedOperation(op.operation)
-    op
+  extension (ref: TailPrim) def operation: Operation = ref._operation
 end given
 
 given XorPrimApi with
-  def xorPrim(
+  def op(
     lhs:         Value,
     rhs:         Value,
     location:    Location
   )(
     using arena: Arena,
-    context:     Context,
-    block:       Block
+    context:     Context
   ): XorPrim =
-    val op = XorPrim(
+    XorPrim(
       summon[OperationApi].operationCreate(
         name = "firrtl.xor",
         location = location,
@@ -1212,20 +1176,18 @@ given XorPrimApi with
         inferredResultsTypes = Some(1)
       )
     )
-    block.appendOwnedOperation(op.operation)
-    op
+  extension (ref: XorPrim) def operation: Operation = ref._operation
 end given
 
 given XorRPrimApi with
-  def xorRPrim(
+  def op(
     input:       Value,
     location:    Location
   )(
     using arena: Arena,
-    context:     Context,
-    block:       Block
+    context:     Context
   ): XorRPrim =
-    val op = XorRPrim(
+    XorRPrim(
       summon[OperationApi].operationCreate(
         name = "firrtl.xorr",
         location = location,
@@ -1233,6 +1195,5 @@ given XorRPrimApi with
         inferredResultsTypes = Some(1)
       )
     )
-    block.appendOwnedOperation(op.operation)
-    op
+  extension (ref: XorRPrim) def operation: Operation = ref._operation
 end given

@@ -515,8 +515,11 @@ trait OperationApi extends HasSegment[Operation] with HasSizeOf[Operation]:
     )(
       using arena: Arena
     ): Unit
-    inline def segment: MemorySegment
-    inline def sizeOf:  Int
+
+    inline def appendToBlock()(using block: Block): Unit
+    inline def insertToBlock(pos: Long)(using block: Block): Unit
+    inline def insertAfter(ref: Operation)(using block: Block): Unit
+    inline def insertBefore(ref: Operation)(using block: Block): Unit
 end OperationApi
 
 class OperationState(val _segment: MemorySegment)
@@ -587,26 +590,26 @@ trait SymbolTableApi extends HasSegment[SymbolTable] with HasSizeOf[SymbolTable]
 
 class Type(val _segment: MemorySegment)
 trait TypeApi extends HasSegment[Type] with HasSizeOf[Type]:
-  inline def f64Type(
+  inline def f64TypeGet(
     using arena: Arena,
     context:     Context
   ): Type
 
-  inline def noneType(
+  inline def noneTypeGet(
     using arena: Arena,
     context:     Context
   ): Type
 
   extension (width: Int)
-    inline def toSignedInteger(
+    inline def integerTypeSignedGet(
       using arena: Arena,
       context:     Context
     ): Type
-    inline def toUnsignedInteger(
+    inline def integerTypeUnsignedGet(
       using arena: Arena,
       context:     Context
     ): Type
-    inline def toIntegerType(
+    inline def integerTypeGet(
       using arena: Arena,
       context:     Context
     ): Type

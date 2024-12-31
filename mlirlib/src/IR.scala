@@ -422,6 +422,7 @@ given OperationApi with
       using arena: Arena
     ): Region = Region(mlirOperationGetFirstRegion(arena, operation.segment))
 
+    // Scala Only API
     inline def destroy():                              Unit = mlirOperationDestroy(operation.segment)
     inline def removeFromParent():                     Unit = mlirOperationRemoveFromParent(operation.segment)
     inline def setOperand(pos: Long, newValue: Value): Unit =
@@ -488,8 +489,14 @@ given OperationApi with
       using arena: Arena
     ): Unit =
       mlirOperationWalk(operation.segment, callback.toOperationWalkCallback.segment, MemorySegment.NULL, walk.toNative)
+    // Scala Only API
+    inline def appendToBlock()(using block: Block): Unit = block.appendOwnedOperation(operation)
+    inline def insertToBlock(pos: Long)(using block: Block): Unit = block.insertOwnedOperation(pos, operation)
+    inline def insertAfter(ref: Operation)(using block: Block): Unit = block.insertOwnedOperationAfter(ref, operation)
+    inline def insertBefore(ref: Operation)(using block: Block): Unit = block.insertOwnedOperationBefore(ref, operation)
     inline def segment: MemorySegment = operation._segment
     inline def sizeOf: Int = MlirOperation.sizeof().toInt
+
 end given
 given WalkResultEnumApi with
   extension (int: Int)
@@ -652,26 +659,26 @@ given OpOperandApi with
 end given
 
 given TypeApi with
-  inline def f64Type(
+  inline def f64TypeGet(
     using arena: Arena,
     context:     Context
   ): Type = Type(mlirF64TypeGet(arena, context.segment))
 
-  inline def noneType(
+  inline def noneTypeGet(
     using arena: Arena,
     context:     Context
   ) = Type(mlirNoneTypeGet(arena, context.segment))
 
   extension (width: Int)
-    inline def toSignedInteger(
+    inline def integerTypeSignedGet(
       using arena: Arena,
       context:     Context
     ): Type = Type(mlirIntegerTypeSignedGet(arena, context.segment, width))
-    inline def toUnsignedInteger(
+    inline def integerTypeUnsignedGet(
       using arena: Arena,
       context:     Context
     ): Type = Type(mlirIntegerTypeUnsignedGet(arena, context.segment, width))
-    inline def toIntegerType(
+    inline def integerTypeGet(
       using arena: Arena,
       context:     Context
     ): Type = Type(mlirIntegerTypeGet(arena, context.segment, width))
