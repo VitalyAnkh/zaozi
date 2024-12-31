@@ -853,3 +853,8 @@ trait EnumHasToNative[T]:
   extension (int: Int) inline def fromNative: T
   extension (ref: T) inline def toNative:     Int
 end EnumHasToNative
+
+trait HasOperation[T]:
+  extension (ref: T)
+    def operation: Operation
+end HasOperation
