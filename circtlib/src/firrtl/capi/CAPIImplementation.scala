@@ -227,7 +227,7 @@ given TypeApi with
     inline def getConstType(
       using arena: Arena
     ): Type = Type(firrtlTypeGetConstType(arena, tpe.segment, true))
-    inline def width(ignoreFlip: Boolean): Long = firrtlTypeGetBitWidth(tpe.segment, ignoreFlip)
+    inline def getBitWidth(ignoreFlip: Boolean): Long = firrtlTypeGetBitWidth(tpe.segment, ignoreFlip)
     inline def isUInt:             Boolean = firrtlTypeIsAUInt(tpe.segment)
     inline def isSInt:             Boolean = firrtlTypeIsASInt(tpe.segment)
     inline def isClock:            Boolean = firrtlTypeIsAClock(tpe.segment)

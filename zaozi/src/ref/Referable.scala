@@ -2,9 +2,7 @@
 
 package me.jiuyang.zaozi
 
-import me.jiuyang.zaozi.circtlib.*
-import me.jiuyang.zaozi.internal.NameKind.Interesting
-import me.jiuyang.zaozi.internal.{Context, NameKind, Named}
+import me.jiuyang.zaozi.internal.NameKind
 
 import scala.language.dynamics
 

@@ -22,8 +22,10 @@ let
         root = ./../..;
         fileset = unions [
           ./../../build.sc
-          ./../../circtpanamabinding
           ./../../circtlib
+          ./../../mlirlib
+          ./../../zaozi
+          ./../../zaozinew
         ];
       };
 

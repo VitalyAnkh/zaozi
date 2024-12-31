@@ -159,7 +159,7 @@ trait TypeApi:
     inline def getConstType(
       using arena: Arena
     ):                  Type
-    inline def width(ignoreFlip: Boolean): Long
+    inline def getBitWidth(ignoreFlip: Boolean): Long
     inline def isUInt:             Boolean
     inline def isSInt:             Boolean
     inline def isClock:            Boolean

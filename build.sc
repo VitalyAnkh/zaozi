@@ -31,6 +31,20 @@ object zaozi extends ScalaModule with ScalafmtModule {
   }
 }
 
+object zaozinew extends ScalaModule with ScalafmtModule {
+  def scalaVersion = T(v.scala)
+  def ivyDeps = T(Seq(v.mainargs, v.oslib, v.upickle, v.sourcecode))
+  def moduleDeps = Seq(circtlib)
+  object tests extends ScalaTests with Utest {
+    def ivyDeps = Agg(v.utest)
+
+    override def forkArgs: T[Seq[String]] = T(
+      super.forkArgs() ++ circtlib.forkArgs()
+    )
+  }
+}
+
+
 // The Scala API
 object circtlib extends ScalaModule with ScalafmtModule with PanamaModule { outer =>
   def scalaVersion = T(v.scala)
