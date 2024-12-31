@@ -1,15 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
-package org.llvm.circt.scalalib.operator
+package org.llvm.circt.scalalib.firrtl.operation
 
-import org.llvm.circt.scalalib.{FirrtlBundleField, FirrtlNameKind}
-import org.llvm.mlir.scalalib.{Block, Context, Location, Operation, Type, Value}
+import org.llvm.circt.scalalib.firrtl.capi.{FirrtlBundleField, FirrtlNameKind}
+import org.llvm.mlir.scalalib.{Context, HasOperation, Location, Operation, Value}
 
 import java.lang.foreign.Arena
-
-trait HasOperation[T]:
-  extension (ref: T)
-    def operation: Operation
-end HasOperation
 
 class InstanceChoice(val _operation: Operation)
 class Instance(val _operation: Operation)

@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 package me.jiuyang.zaozi.circtlib.tests
-import org.llvm.circt.scalalib.operator.{*, given}
-import org.llvm.circt.scalalib.{FirrtlBundleFieldApi, FirrtlNameKind, TypeApi, given_DialectHandleApi, given_FirrtlBundleFieldApi, given_FirrtlDirectionApi, given_TypeApi}
-import org.llvm.mlir.scalalib.{Block, Context, ContextApi, LocationApi, Module as MlirModule, ModuleApi as MlirModuleApi, given}
+
+import org.llvm.circt.scalalib.firrtl.capi.{FirrtlBundleFieldApi, FirrtlNameKind, TypeApi, given_DialectHandleApi, given_FirrtlBundleFieldApi, given_FirrtlDirectionApi, given_TypeApi}
+import org.llvm.circt.scalalib.firrtl.operation.{*, given}
+import org.llvm.mlir.scalalib.{Module as MlirModule, ModuleApi as MlirModuleApi, given_ModuleApi, *, given}
 import utest.*
 
 import java.lang.foreign.Arena

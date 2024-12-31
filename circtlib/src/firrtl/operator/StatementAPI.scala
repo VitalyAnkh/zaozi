@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
-package org.llvm.circt.scalalib.operator
+package org.llvm.circt.scalalib.firrtl.operation
 
-import org.llvm.mlir.scalalib.{Block, Context, Location, Operation, Value}
+import org.llvm.mlir.scalalib.{Block, Context, Location, Operation, HasOperation, Value}
 
 import java.lang.foreign.Arena
 

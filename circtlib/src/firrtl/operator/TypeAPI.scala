@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-package org.llvm.circt.scalalib.operator
+package org.llvm.circt.scalalib.firrtl.tpe
 
 class AnalogType
 class AnyRefType

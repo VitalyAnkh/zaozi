@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-package org.llvm.circt.scalalib
+package org.llvm.circt.scalalib.firrtl.capi
 
 import org.llvm.circt.*
 import org.llvm.circt.CAPI.*

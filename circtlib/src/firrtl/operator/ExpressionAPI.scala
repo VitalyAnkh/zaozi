@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
-package org.llvm.circt.scalalib.operator
+package org.llvm.circt.scalalib.firrtl.operation
 
-import org.llvm.mlir.scalalib.Operation
+import org.llvm.mlir.scalalib.{Operation, HasOperation}
 
 class AddPrim(val _operation: Operation)
 trait AddPrimApi extends HasOperation[AddPrim]

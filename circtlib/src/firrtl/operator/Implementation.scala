@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
-package org.llvm.circt.scalalib.operator
+package org.llvm.circt.scalalib.firrtl.operation
 
-import org.llvm.circt.scalalib.{FirrtlBundleField, FirrtlDirection, FirrtlNameKind, given}
-import org.llvm.mlir.scalalib.{Block, Context, Location, LocationApi, NamedAttributeApi, Operation, OperationApi, Type, Value, Module as MlirModule, given}
+import org.llvm.circt.scalalib.firrtl.capi.{FirrtlBundleField, FirrtlDirection, FirrtlNameKind, given}
+import org.llvm.mlir.scalalib.{Block, Context, Location, LocationApi, NamedAttributeApi, Operation,HasOperation, OperationApi, Type, Value, Module as MlirModule, given}
 
 import java.lang.foreign.Arena
 
