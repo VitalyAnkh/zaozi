@@ -57,7 +57,6 @@ given ToConstBool[Boolean] with
         .head
       new Const(const, Bool())
 
-
 given [R <: Referable[Bool]]: AsBits[Bool, R] with
   extension (ref: R)
     override def asBits(

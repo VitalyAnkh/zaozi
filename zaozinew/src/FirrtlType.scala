@@ -8,11 +8,13 @@ import java.lang.foreign.Arena
 import scala.language.dynamics
 
 // Type System, matching MlirType
+opaque type Width = Int
 trait Data:
   def toMlirType(
     using Arena,
     Context
   ): Type
+
 trait Clock extends Data:
   val const: Boolean
   val ref:   Boolean
@@ -26,15 +28,18 @@ trait Clock extends Data:
     if (ref) mlirType.toRef(refRw)
     mlirType
 
-trait AsyncReset extends Data:
-  val const: Boolean
-  val ref:   Boolean
-  val refRw: Boolean
+trait Reset extends Data:
+  val isAsync: Boolean
+  val const:   Boolean
+  val ref:     Boolean
+  val refRw:   Boolean
   def toMlirType(
     using Arena,
     Context
   ): Type =
-    val mlirType = summon[org.llvm.circt.scalalib.firrtl.capi.TypeApi].getAsyncReset
+    val mlirType =
+      if (isAsync) summon[org.llvm.circt.scalalib.firrtl.capi.TypeApi].getAsyncReset
+      else 1.getUInt
     if (const) mlirType.getConstType
     if (ref) mlirType.toRef(refRw)
     mlirType
@@ -53,20 +58,45 @@ trait UInt extends Data:
     if (ref) mlirType.toRef(refRw)
     mlirType
 
-type Reset = UInt
-
-type Bool = UInt
-
 trait SInt extends Data:
   val width: Int
   val const: Boolean
-  val ref:   Boolean
+  val ref: Boolean
+  val refRw: Boolean
+
+  def toMlirType(
+                  using Arena,
+                  Context
+                ): Type =
+    val mlirType = width.getSInt
+    if (const) mlirType.getConstType
+    if (ref) mlirType.toRef(refRw)
+    mlirType
+
+trait Bool extends Data:
+  val const: Boolean
+  val ref: Boolean
   val refRw: Boolean
   def toMlirType(
-    using Arena,
-    Context
-  ): Type =
-    val mlirType = width.getSInt
+                  using Arena,
+                  Context
+                ): Type =
+    val mlirType = 1.getUInt
+    if (const) mlirType.getConstType
+    if (ref) mlirType.toRef(refRw)
+    mlirType
+
+trait Bits extends Data:
+  val width: Int
+  val const: Boolean
+  val ref: Boolean
+  val refRw: Boolean
+
+  def toMlirType(
+                  using Arena,
+                  Context
+                ): Type =
+    val mlirType = width.getUInt
     if (const) mlirType.getConstType
     if (ref) mlirType.toRef(refRw)
     mlirType
@@ -101,13 +131,13 @@ trait DynamicSubfield:
   ): Ref[E]
 
 trait Bundle extends Data:
-  val fields: Seq[BundleField[?]]
-  val const:  Boolean
+  val elements: Seq[BundleField[?]]
+  val const:    Boolean
   def toMlirType(
     using Arena,
     Context
   ): Type =
-    val mlirType = fields
+    val mlirType = elements
       .map(f =>
         summon[org.llvm.circt.scalalib.firrtl.capi.FirrtlBundleFieldApi]
           .createFirrtlBundleField(f.name, f.isFlip, f.tpe.toMlirType)
@@ -123,8 +153,8 @@ trait BundleField[T <: Data]:
 
 trait Vec[E <: Data] extends Data:
   val elementType: E
-  val count:   Int
-  val const:   Boolean
+  val count:       Int
+  val const:       Boolean
   def toMlirType(
     using Arena,
     Context
@@ -147,9 +177,9 @@ trait Ref[T <: Data] extends Referable[T] with HasOperation
 
 trait Node[T <: Data] extends Referable[T] with HasOperation
 
-trait Reg[T <: Data] extends Referable[T] with HasOperation
+trait Const[T <: Data] extends Referable[T] with HasOperation
 
-trait RegInit[T <: Data] extends Referable[T] with HasOperation
+trait Reg[T <: Data] extends Referable[T] with HasOperation
 
 trait Wire[T <: Data] extends Referable[T] with HasOperation
 
@@ -164,6 +194,7 @@ inline def locate(
     summon[sourcecode.Line].value,
     0
   )
+
 inline def valName(
   using sourcecode.Name
 ): String = summon[sourcecode.Name].value

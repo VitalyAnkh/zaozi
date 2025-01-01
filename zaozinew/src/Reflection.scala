@@ -10,19 +10,18 @@ trait MlirTypeReflection:
   extension (tpe: Type)
     def toData(
       using Arena
-    ):                Data
-    def asClock:      Clock
-    def asReset:      Reset
-    def asAsyncReset: AsyncReset
-    def asUInt:       UInt
-    def asSInt:       SInt
-    def asAnalog:     Analog
+    ):            Data
+    def asClock:  Clock
+    def asReset:  Reset
+    def asUInt:   UInt
+    def asSInt:   SInt
+    def asAnalog: Analog
     def asBundle(
       using Arena
-    ):                Bundle
+    ):            Bundle
     def asVec[T <: Data](
       using Arena
-    ):                Vec[T]
+    ):            Vec[T]
 end MlirTypeReflection
 
 given MlirTypeReflection with
@@ -32,36 +31,23 @@ given MlirTypeReflection with
     ): Data =
       if (tpe.isClock) tpe.asClock
       else if (tpe.isReset) tpe.asReset
-      else if (tpe.isAsyncReset) tpe.asAsyncReset
       else if (tpe.isUInt) tpe.asUInt
       else if (tpe.isSInt) tpe.asSInt
       else if (tpe.isAnalog) tpe.asAnalog
       else if (tpe.isBundle) tpe.asBundle
       else if (tpe.isVector) tpe.asVec[Data]
       else throw new Exception("Unmatched ZaoziType")
-    def asClock:      Clock      =
+    def asClock:  Clock  =
       require(tpe.isClock)
       new Clock:
         val const: Boolean = tpe.isConst
         val ref:   Boolean = tpe.isRef
         // TODO: need C-API
         val refRw: Boolean = false
-    def asReset:      Reset      =
+    def asReset:  Reset  =
       require(tpe.isReset)
-      new Reset:
-        val width: Int     = 1
-        val const: Boolean = tpe.isConst
-        val ref:   Boolean = tpe.isRef
-        // TODO: need C-API
-        val refRw: Boolean = false
-    def asAsyncReset: AsyncReset =
-      require(tpe.isAsyncReset)
-      new AsyncReset:
-        val const: Boolean = tpe.isConst
-        val ref:   Boolean = tpe.isRef
-        // TODO: need C-API
-        val refRw: Boolean = false
-    def asUInt:       UInt       =
+      ???
+    def asUInt:   UInt   =
       require(tpe.isUInt)
       new UInt:
         val width: Int     = tpe.getBitWidth(true).toInt
@@ -69,7 +55,7 @@ given MlirTypeReflection with
         val ref:   Boolean = tpe.isRef
         // TODO: need C-API
         val refRw: Boolean = false
-    def asSInt:       SInt       =
+    def asSInt:   SInt   =
       require(tpe.isSInt)
       new SInt:
         val width: Int     = tpe.getBitWidth(true).toInt
@@ -77,7 +63,7 @@ given MlirTypeReflection with
         val ref:   Boolean = tpe.isRef
         // TODO: need C-API
         val refRw: Boolean = false
-    def asAnalog:     Analog     =
+    def asAnalog: Analog =
       require(tpe.isAnalog)
       new Analog:
         val width: Int     = tpe.getBitWidth(true).toInt
@@ -90,14 +76,14 @@ given MlirTypeReflection with
     ): Bundle =
       require(tpe.isBundle)
       new Bundle:
-        val fields: Seq[BundleField[_]] = Seq.tabulate(tpe.getBundleNumFields.toInt)(i =>
+        val elements: Seq[BundleField[?]] = Seq.tabulate(tpe.getBundleNumFields.toInt)(i =>
           val bf = tpe.getBundleFieldByIndex(i)
           new Object with BundleField:
             val name   = bf.getName()
             val isFlip = bf.getIsFlip()
             val tpe    = bf.getType().toData
         )
-        val const:  Boolean             = tpe.isConst
+        val const:    Boolean             = tpe.isConst
     def asVec[T <: Data](
       using Arena
     ): Vec[T] =
@@ -106,16 +92,14 @@ given MlirTypeReflection with
         val elementType: T       =
           (
             tpe match
-              case tpe if tpe.isClock      => tpe.asClock
-              case tpe if tpe.isReset      => tpe.asReset
-              case tpe if tpe.isAsyncReset => tpe.asAsyncReset
-              case tpe if tpe.isUInt       => tpe.asUInt
-              case tpe if tpe.isSInt       => tpe.asSInt
-              case tpe if tpe.isAnalog     => tpe.asAnalog
-              case tpe if tpe.isBundle     => tpe.asBundle
-              case tpe if tpe.isVector     => tpe.asVec[Data]
+              case tpe if tpe.isClock  => tpe.asClock
+              case tpe if tpe.isReset  => tpe.asReset
+              case tpe if tpe.isUInt   => tpe.asUInt
+              case tpe if tpe.isSInt   => tpe.asSInt
+              case tpe if tpe.isAnalog => tpe.asAnalog
+              case tpe if tpe.isBundle => tpe.asBundle
+              case tpe if tpe.isVector => tpe.asVec[Data]
           ).asInstanceOf[T]
         val count:       Int     = tpe.getElementNum.toInt
         val const:       Boolean = tpe.isConst
-
 end given
