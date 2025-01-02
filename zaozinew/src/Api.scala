@@ -2,37 +2,39 @@
 
 package me.jiuyang.zaozi
 
-import org.llvm.mlir.scalalib.{Block, Context}
+import org.llvm.mlir.scalalib.{Block, Context, Module as CirctModule}
 
 import java.lang.foreign.Arena
 
 // This is all User APIs
-trait ClockConstructor:
+trait Parameter
+trait Interface[P <: Parameter](val parameter: P) extends Bundle
+trait ConstructorApi:
   def Clock(): Clock
 
-trait ResetConstructor:
-  def Reset():      Reset
+  def Reset(): Reset
+
   def AsyncReset(): Reset
 
-trait UIntConstructor:
   def UInt(width: Width): UInt
 
-trait BitsConstructor:
   def Bits(width: Width): Bits
 
-trait SIntConstructor:
   def SInt(width: Width): SInt
 
-trait BoolConstructor:
   def Bool(): Bool
-  extension (bool: Boolean)
-    /** Create a constant Bool from BigInt. */
-    def B(
-      using Arena,
-      Block
-    ): Const[Bool]
 
-trait ConstructorApi:
+  // It returns a CirctModule, should I wrap it?
+  def Module[P <: Parameter, I <: Interface[P]](
+    name:      String,
+    parameter: P,
+    interface: I
+  )(body:      (Arena, Block) ?=> (P, Wire[I]) => Unit
+  )(
+    using Arena,
+    Context
+  ): CirctModule
+
   def Wire[T <: Data](
     refType: T
   )(
@@ -438,7 +440,6 @@ trait BitsApi[R <: Referable[Bits]]
     with Pad[Bits, Int, Bits, R]
     with ExtractRange[Bits, Int, Bits, R]
     with ExtractElement[Bits, Bool, R, Int | Ref[UInt]]
-    with BitsConstructor
 
 trait BoolApi[R <: Referable[Bool]]
     extends AsBits[Bool, R]
@@ -449,7 +450,6 @@ trait BoolApi[R <: Referable[Bool]]
     with Or[Bool, Bool, R]
     with Xor[Bool, Bool, R]
     with Mux[Bool, R]
-    with BoolConstructor
 
 trait UIntApi[R <: Referable[UInt]]
     extends AsBits[UInt, R]
@@ -466,7 +466,6 @@ trait UIntApi[R <: Referable[UInt]]
     with Neq[UInt, Bool, R]
     with Shl[UInt, Int | Referable[UInt], UInt, R]
     with Shr[UInt, Int | Referable[UInt], UInt, R]
-    with UIntConstructor
 trait SIntApi[R <: Referable[SInt]]
     extends AsBits[SInt, R]
     with Add[SInt, SInt, R]
@@ -481,6 +480,10 @@ trait SIntApi[R <: Referable[SInt]]
     with Neq[SInt, Bool, R]
     with Shl[SInt, Int | Referable[UInt], SInt, R]
     with Shr[SInt, Int | Referable[UInt], SInt, R]
-    with SIntConstructor
-trait ClockApi[R <: Referable[Clock]] extends ClockConstructor
-trait ResetApi[R <: Referable[Reset]] extends ResetConstructor
+trait ClockApi[R <: Referable[Clock]]
+
+trait ResetApi[R <: Referable[Reset]]
+
+trait WidthApi:
+  extension (int: Int)
+    def W: Width

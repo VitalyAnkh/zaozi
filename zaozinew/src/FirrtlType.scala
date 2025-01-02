@@ -1,119 +1,77 @@
 // SPDX-License-Identifier: Apache-2.0
 package me.jiuyang.zaozi
 
-import org.llvm.circt.scalalib.firrtl.capi.{given_FirrtlBundleFieldApi, given_TypeApi}
 import org.llvm.mlir.scalalib.{Context, Location, LocationApi, Operation, Type, Value, given_LocationApi}
 
 import java.lang.foreign.Arena
 import scala.language.dynamics
 
 // Type System, matching MlirType
-opaque type Width = Int
+
+// TODO: it should be opaque?
+trait Width:
+  val _width: Int
+
 trait Data:
   def toMlirType(
     using Arena,
-    Context
+    Context,
+    TypeImpl
   ): Type
 
 trait Clock extends Data:
-  val const: Boolean
-  val ref:   Boolean
-  val refRw: Boolean
   def toMlirType(
     using Arena,
-    Context
-  ): Type =
-    val mlirType = summon[org.llvm.circt.scalalib.firrtl.capi.TypeApi].getClock
-    if (const) mlirType.getConstType
-    if (ref) mlirType.toRef(refRw)
-    mlirType
+    Context,
+    TypeImpl
+  ): Type = this.toMlirTypeImpl
 
 trait Reset extends Data:
-  val isAsync: Boolean
-  val const:   Boolean
-  val ref:     Boolean
-  val refRw:   Boolean
-  def toMlirType(
+  private[zaozi] val _isAsync: Boolean
+  final def toMlirType(
     using Arena,
-    Context
-  ): Type =
-    val mlirType =
-      if (isAsync) summon[org.llvm.circt.scalalib.firrtl.capi.TypeApi].getAsyncReset
-      else 1.getUInt
-    if (const) mlirType.getConstType
-    if (ref) mlirType.toRef(refRw)
-    mlirType
+    Context,
+    TypeImpl
+  ): Type = this.toMlirTypeImpl
 
 trait UInt extends Data:
-  val width: Int
-  val const: Boolean
-  val ref:   Boolean
-  val refRw: Boolean
-  def toMlirType(
+  private[zaozi] val _width: Int
+  final def toMlirType(
     using Arena,
-    Context
-  ): Type =
-    val mlirType = width.getUInt
-    if (const) mlirType.getConstType
-    if (ref) mlirType.toRef(refRw)
-    mlirType
+    Context,
+    TypeImpl
+  ): Type = this.toMlirTypeImpl
 
 trait SInt extends Data:
-  val width: Int
-  val const: Boolean
-  val ref: Boolean
-  val refRw: Boolean
-
-  def toMlirType(
-                  using Arena,
-                  Context
-                ): Type =
-    val mlirType = width.getSInt
-    if (const) mlirType.getConstType
-    if (ref) mlirType.toRef(refRw)
-    mlirType
-
-trait Bool extends Data:
-  val const: Boolean
-  val ref: Boolean
-  val refRw: Boolean
-  def toMlirType(
-                  using Arena,
-                  Context
-                ): Type =
-    val mlirType = 1.getUInt
-    if (const) mlirType.getConstType
-    if (ref) mlirType.toRef(refRw)
-    mlirType
-
-trait Bits extends Data:
-  val width: Int
-  val const: Boolean
-  val ref: Boolean
-  val refRw: Boolean
-
-  def toMlirType(
-                  using Arena,
-                  Context
-                ): Type =
-    val mlirType = width.getUInt
-    if (const) mlirType.getConstType
-    if (ref) mlirType.toRef(refRw)
-    mlirType
-
-trait Analog extends Data:
-  val width: Int
-  val const: Boolean
-  val ref:   Boolean
-  val refRw: Boolean
+  private[zaozi] val _width: Int
   def toMlirType(
     using Arena,
-    Context
-  ): Type =
-    val mlirType = width.getAnolog
-    if (const) mlirType.getConstType
-    if (ref) mlirType.toRef(refRw)
-    mlirType
+    Context,
+    TypeImpl
+  ): Type = this.toMlirTypeImpl
+
+trait Bool extends Data:
+  def toMlirType(
+    using Arena,
+    Context,
+    TypeImpl
+  ): Type = this.toMlirTypeImpl
+
+trait Bits extends Data:
+  private[zaozi] val _width: Int
+  def toMlirType(
+    using Arena,
+    Context,
+    TypeImpl
+  ): Type = this.toMlirTypeImpl
+
+trait Analog extends Data:
+  private[zaozi] val _width: Int
+  def toMlirType(
+    using Arena,
+    Context,
+    TypeImpl
+  ): Type = this.toMlirTypeImpl
 
 /** Due to Scala not allowing deferred macro call(calling user defined macro from outer macro). Any implementation to
   * [[DynamicSubfield]] should make sure the dynamic access is to a val that has a return type of [[BundleField]]. For
@@ -131,38 +89,56 @@ trait DynamicSubfield:
   ): Ref[E]
 
 trait Bundle extends Data:
-  val elements: Seq[BundleField[?]]
-  val const:    Boolean
+  private[zaozi] var instantiating = true
+  // valName -> BundleField
+  private[zaozi] val _elements: collection.mutable.Map[String, BundleField[?]] =
+    collection.mutable.Map[String, BundleField[?]]()
+  def Flipped[T <: Data](
+    tpe: T
+  )(
+    using TypeImpl,
+    sourcecode.Name
+  ): BundleField[T] = this.FlippedImpl(None, tpe)
+  def Aligned[T <: Data](
+    tpe: T
+  )(
+    using TypeImpl,
+    sourcecode.Name
+  ): BundleField[T] = this.AlignedImpl(None, tpe)
+  def Flipped[T <: Data](
+    name: String,
+    tpe:  T
+  )(
+    using TypeImpl,
+    sourcecode.Name
+  ): BundleField[T] = this.FlippedImpl(Some(name), tpe)
+  def Aligned[T <: Data](
+    name: String,
+    tpe:  T
+  )(
+    using TypeImpl,
+    sourcecode.Name
+  ): BundleField[T] = this.AlignedImpl(Some(name), tpe)
+
   def toMlirType(
     using Arena,
-    Context
-  ): Type =
-    val mlirType = elements
-      .map(f =>
-        summon[org.llvm.circt.scalalib.firrtl.capi.FirrtlBundleFieldApi]
-          .createFirrtlBundleField(f.name, f.isFlip, f.tpe.toMlirType)
-      )
-      .getBundle
-    if (const) mlirType.getConstType
-    mlirType
+    Context,
+    TypeImpl
+  ): Type = this.toMlirTypeImpl
 
 trait BundleField[T <: Data]:
-  val name:   String
-  val isFlip: Boolean
-  val tpe:    T
+  private[zaozi] val _name:   String
+  private[zaozi] val _isFlip: Boolean
+  private[zaozi] val _tpe:    T
 
 trait Vec[E <: Data] extends Data:
-  val elementType: E
-  val count:       Int
-  val const:       Boolean
+  private[zaozi] val _elementType: E
+  private[zaozi] val _count:       Int
   def toMlirType(
     using Arena,
-    Context
-  ): Type =
-    val mlirType = elementType.toMlirType.getVector(count)
-    if (const) mlirType.getConstType
-    mlirType
-
+    Context,
+    TypeImpl
+  ): Type = this.toMlirTypeImpl
 // Type System: Referable to contain an operation which has a single value.
 trait HasOperation:
   def operation: Operation
@@ -198,3 +174,65 @@ inline def locate(
 inline def valName(
   using sourcecode.Name
 ): String = summon[sourcecode.Name].value
+
+trait TypeImpl:
+  extension (ref: Reset)
+    def toMlirTypeImpl(
+      using Arena,
+      Context
+    ): Type
+  extension (ref: Clock)
+    def toMlirTypeImpl(
+      using Arena,
+      Context
+    ): Type
+  extension (ref: UInt)
+    def toMlirTypeImpl(
+      using Arena,
+      Context
+    ): Type
+  extension (ref: SInt)
+    def toMlirTypeImpl(
+      using Arena,
+      Context
+    ): Type
+  extension (ref: Bits)
+    def toMlirTypeImpl(
+      using Arena,
+      Context
+    ): Type
+  extension (ref: Analog)
+    def toMlirTypeImpl(
+      using Arena,
+      Context
+    ): Type
+  extension (ref: Bool)
+    def toMlirTypeImpl(
+      using Arena,
+      Context
+    ): Type
+  extension (ref: Bundle)
+    def elements: Seq[BundleField[?]]
+    def toMlirTypeImpl(
+      using Arena,
+      Context
+    ):            Type
+    def FlippedImpl[T <: Data](
+      name: Option[String],
+      tpe:  T
+    )(
+      using sourcecode.Name
+    ):            BundleField[T]
+    def AlignedImpl[T <: Data](
+      name: Option[String],
+      tpe:  T
+    )(
+      using sourcecode.Name
+    ):            BundleField[T]
+  extension (ref: Vec[?])
+    def elementType: Data
+    def count:       Int
+    def toMlirTypeImpl(
+      using Arena,
+      Context
+    ):               Type
